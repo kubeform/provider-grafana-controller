@@ -3,10 +3,10 @@ module kubeform.dev/provider-grafana-controller
 go 1.16
 
 require (
-	github.com/equinix/terraform-provider-metal v1.1.1-0.20210727130052-a55db9bd1897
 	github.com/fatih/structs v1.1.0
 	github.com/go-logr/logr v0.4.0
 	github.com/gobuffalo/flect v0.2.3
+	github.com/grafana/terraform-provider-grafana v1.13.3
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
 	github.com/hashicorp/terraform-plugin-go v0.3.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
@@ -22,11 +22,11 @@ require (
 	k8s.io/api v0.21.1
 	k8s.io/apiextensions-apiserver v0.21.1
 	k8s.io/apimachinery v0.21.1
-	k8s.io/client-go v0.21.1
+	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/klog/v2 v2.8.0
 	kmodules.xyz/client-go v0.0.0-20210617233340-13d22e91512b
 	kubeform.dev/apimachinery v0.0.0-20210629153539-7bcd34a30eb5
-	kubeform.dev/provider-grafana-api v0.2.0
+	kubeform.dev/provider-grafana-api v0.0.0-20210730044833-00167982232f
 	sigs.k8s.io/cli-utils v0.25.0
 	sigs.k8s.io/controller-runtime v0.9.0
 )
