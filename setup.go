@@ -27,8 +27,8 @@ import (
 	"sync"
 	"time"
 
-	grafana "github.com/equinix/terraform-provider-metal/metal"
 	"github.com/gobuffalo/flect"
+	grafana "github.com/grafana/terraform-provider-grafana/grafana"
 	auditlib "go.bytebuilders.dev/audit/lib"
 	arv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -39,36 +39,26 @@ import (
 	admissionregistrationv1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
-	bgpv1alpha1 "kubeform.dev/provider-grafana-api/apis/bgp/v1alpha1"
-	connectionv1alpha1 "kubeform.dev/provider-grafana-api/apis/connection/v1alpha1"
-	devicev1alpha1 "kubeform.dev/provider-grafana-api/apis/device/v1alpha1"
-	gatewayv1alpha1 "kubeform.dev/provider-grafana-api/apis/gateway/v1alpha1"
-	ipv1alpha1 "kubeform.dev/provider-grafana-api/apis/ip/v1alpha1"
+	alertv1alpha1 "kubeform.dev/provider-grafana-api/apis/alert/v1alpha1"
+	builtinv1alpha1 "kubeform.dev/provider-grafana-api/apis/builtin/v1alpha1"
+	dashboardv1alpha1 "kubeform.dev/provider-grafana-api/apis/dashboard/v1alpha1"
+	datav1alpha1 "kubeform.dev/provider-grafana-api/apis/data/v1alpha1"
+	folderv1alpha1 "kubeform.dev/provider-grafana-api/apis/folder/v1alpha1"
 	organizationv1alpha1 "kubeform.dev/provider-grafana-api/apis/organization/v1alpha1"
-	portv1alpha1 "kubeform.dev/provider-grafana-api/apis/port/v1alpha1"
-	projectv1alpha1 "kubeform.dev/provider-grafana-api/apis/project/v1alpha1"
-	reservedv1alpha1 "kubeform.dev/provider-grafana-api/apis/reserved/v1alpha1"
-	spotv1alpha1 "kubeform.dev/provider-grafana-api/apis/spot/v1alpha1"
-	sshv1alpha1 "kubeform.dev/provider-grafana-api/apis/ssh/v1alpha1"
+	rolev1alpha1 "kubeform.dev/provider-grafana-api/apis/role/v1alpha1"
+	syntheticv1alpha1 "kubeform.dev/provider-grafana-api/apis/synthetic/v1alpha1"
+	teamv1alpha1 "kubeform.dev/provider-grafana-api/apis/team/v1alpha1"
 	userv1alpha1 "kubeform.dev/provider-grafana-api/apis/user/v1alpha1"
-	virtualv1alpha1 "kubeform.dev/provider-grafana-api/apis/virtual/v1alpha1"
-	vlanv1alpha1 "kubeform.dev/provider-grafana-api/apis/vlan/v1alpha1"
-	volumev1alpha1 "kubeform.dev/provider-grafana-api/apis/volume/v1alpha1"
-	controllersbgp "kubeform.dev/provider-grafana-controller/controllers/bgp"
-	controllersconnection "kubeform.dev/provider-grafana-controller/controllers/connection"
-	controllersdevice "kubeform.dev/provider-grafana-controller/controllers/device"
-	controllersgateway "kubeform.dev/provider-grafana-controller/controllers/gateway"
-	controllersip "kubeform.dev/provider-grafana-controller/controllers/ip"
+	controllersalert "kubeform.dev/provider-grafana-controller/controllers/alert"
+	controllersbuiltin "kubeform.dev/provider-grafana-controller/controllers/builtin"
+	controllersdashboard "kubeform.dev/provider-grafana-controller/controllers/dashboard"
+	controllersdata "kubeform.dev/provider-grafana-controller/controllers/data"
+	controllersfolder "kubeform.dev/provider-grafana-controller/controllers/folder"
 	controllersorganization "kubeform.dev/provider-grafana-controller/controllers/organization"
-	controllersport "kubeform.dev/provider-grafana-controller/controllers/port"
-	controllersproject "kubeform.dev/provider-grafana-controller/controllers/project"
-	controllersreserved "kubeform.dev/provider-grafana-controller/controllers/reserved"
-	controllersspot "kubeform.dev/provider-grafana-controller/controllers/spot"
-	controllersssh "kubeform.dev/provider-grafana-controller/controllers/ssh"
+	controllersrole "kubeform.dev/provider-grafana-controller/controllers/role"
+	controllerssynthetic "kubeform.dev/provider-grafana-controller/controllers/synthetic"
+	controllersteam "kubeform.dev/provider-grafana-controller/controllers/team"
 	controllersuser "kubeform.dev/provider-grafana-controller/controllers/user"
-	controllersvirtual "kubeform.dev/provider-grafana-controller/controllers/virtual"
-	controllersvlan "kubeform.dev/provider-grafana-controller/controllers/vlan"
-	controllersvolume "kubeform.dev/provider-grafana-controller/controllers/volume"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -253,111 +243,129 @@ func updateVWC(vwcClient *admissionregistrationv1.AdmissionregistrationV1Client,
 func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVersionKind, auditor *auditlib.EventPublisher, watchOnlyDefault bool) error {
 	switch gvk {
 	case schema.GroupVersionKind{
-		Group:   "bgp.grafana.kubeform.com",
+		Group:   "alert.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Session",
+		Kind:    "Notification",
 	}:
-		if err := (&controllersbgp.SessionReconciler{
+		if err := (&controllersalert.NotificationReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Session"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Notification"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_bgp_session"],
-			TypeName:         "metal_bgp_session",
+			Resource:         grafana.Provider().ResourcesMap["grafana_alert_notification"],
+			TypeName:         "grafana_alert_notification",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Session")
+			setupLog.Error(err, "unable to create controller", "controller", "Notification")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "connection.grafana.kubeform.com",
+		Group:   "builtin.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Connection",
+		Kind:    "RoleAssignment",
 	}:
-		if err := (&controllersconnection.ConnectionReconciler{
+		if err := (&controllersbuiltin.RoleAssignmentReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Connection"),
+			Log:              ctrl.Log.WithName("controllers").WithName("RoleAssignment"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_connection"],
-			TypeName:         "metal_connection",
+			Resource:         grafana.Provider().ResourcesMap["grafana_builtin_role_assignment"],
+			TypeName:         "grafana_builtin_role_assignment",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Connection")
+			setupLog.Error(err, "unable to create controller", "controller", "RoleAssignment")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "device.grafana.kubeform.com",
+		Group:   "dashboard.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Device",
+		Kind:    "Dashboard",
 	}:
-		if err := (&controllersdevice.DeviceReconciler{
+		if err := (&controllersdashboard.DashboardReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Device"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Dashboard"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_device"],
-			TypeName:         "metal_device",
+			Resource:         grafana.Provider().ResourcesMap["grafana_dashboard"],
+			TypeName:         "grafana_dashboard",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Device")
+			setupLog.Error(err, "unable to create controller", "controller", "Dashboard")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "device.grafana.kubeform.com",
+		Group:   "dashboard.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "NetworkType",
+		Kind:    "Permission",
 	}:
-		if err := (&controllersdevice.NetworkTypeReconciler{
+		if err := (&controllersdashboard.PermissionReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("NetworkType"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Permission"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_device_network_type"],
-			TypeName:         "metal_device_network_type",
+			Resource:         grafana.Provider().ResourcesMap["grafana_dashboard_permission"],
+			TypeName:         "grafana_dashboard_permission",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "NetworkType")
+			setupLog.Error(err, "unable to create controller", "controller", "Permission")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "gateway.grafana.kubeform.com",
+		Group:   "data.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Gateway",
+		Kind:    "Source",
 	}:
-		if err := (&controllersgateway.GatewayReconciler{
+		if err := (&controllersdata.SourceReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Gateway"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Source"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_gateway"],
-			TypeName:         "metal_gateway",
+			Resource:         grafana.Provider().ResourcesMap["grafana_data_source"],
+			TypeName:         "grafana_data_source",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Gateway")
+			setupLog.Error(err, "unable to create controller", "controller", "Source")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "ip.grafana.kubeform.com",
+		Group:   "folder.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Attachment",
+		Kind:    "Folder",
 	}:
-		if err := (&controllersip.AttachmentReconciler{
+		if err := (&controllersfolder.FolderReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Attachment"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Folder"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_ip_attachment"],
-			TypeName:         "metal_ip_attachment",
+			Resource:         grafana.Provider().ResourcesMap["grafana_folder"],
+			TypeName:         "grafana_folder",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Attachment")
+			setupLog.Error(err, "unable to create controller", "controller", "Folder")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "folder.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Permission",
+	}:
+		if err := (&controllersfolder.PermissionReconciler{
+			Client:           mgr.GetClient(),
+			Log:              ctrl.Log.WithName("controllers").WithName("Permission"),
+			Scheme:           mgr.GetScheme(),
+			Gvk:              gvk,
+			Provider:         grafana.Provider(),
+			Resource:         grafana.Provider().ResourcesMap["grafana_folder_permission"],
+			TypeName:         "grafana_folder_permission",
+			WatchOnlyDefault: watchOnlyDefault,
+		}).SetupWithManager(ctx, mgr, auditor); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Permission")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -371,227 +379,137 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_organization"],
-			TypeName:         "metal_organization",
+			Resource:         grafana.Provider().ResourcesMap["grafana_organization"],
+			TypeName:         "grafana_organization",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Organization")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "port.grafana.kubeform.com",
+		Group:   "role.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "VlanAttachment",
+		Kind:    "Role",
 	}:
-		if err := (&controllersport.VlanAttachmentReconciler{
+		if err := (&controllersrole.RoleReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("VlanAttachment"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Role"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_port_vlan_attachment"],
-			TypeName:         "metal_port_vlan_attachment",
+			Resource:         grafana.Provider().ResourcesMap["grafana_role"],
+			TypeName:         "grafana_role",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "VlanAttachment")
+			setupLog.Error(err, "unable to create controller", "controller", "Role")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "project.grafana.kubeform.com",
+		Group:   "synthetic.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Project",
+		Kind:    "MonitoringCheck",
 	}:
-		if err := (&controllersproject.ProjectReconciler{
+		if err := (&controllerssynthetic.MonitoringCheckReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Project"),
+			Log:              ctrl.Log.WithName("controllers").WithName("MonitoringCheck"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_project"],
-			TypeName:         "metal_project",
+			Resource:         grafana.Provider().ResourcesMap["grafana_synthetic_monitoring_check"],
+			TypeName:         "grafana_synthetic_monitoring_check",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Project")
+			setupLog.Error(err, "unable to create controller", "controller", "MonitoringCheck")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "project.grafana.kubeform.com",
+		Group:   "synthetic.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "ApiKey",
+		Kind:    "MonitoringProbe",
 	}:
-		if err := (&controllersproject.ApiKeyReconciler{
+		if err := (&controllerssynthetic.MonitoringProbeReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("ApiKey"),
+			Log:              ctrl.Log.WithName("controllers").WithName("MonitoringProbe"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_project_api_key"],
-			TypeName:         "metal_project_api_key",
+			Resource:         grafana.Provider().ResourcesMap["grafana_synthetic_monitoring_probe"],
+			TypeName:         "grafana_synthetic_monitoring_probe",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "ApiKey")
+			setupLog.Error(err, "unable to create controller", "controller", "MonitoringProbe")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "project.grafana.kubeform.com",
+		Group:   "team.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "SshKey",
+		Kind:    "Team",
 	}:
-		if err := (&controllersproject.SshKeyReconciler{
+		if err := (&controllersteam.TeamReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("SshKey"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Team"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_project_ssh_key"],
-			TypeName:         "metal_project_ssh_key",
+			Resource:         grafana.Provider().ResourcesMap["grafana_team"],
+			TypeName:         "grafana_team",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "SshKey")
+			setupLog.Error(err, "unable to create controller", "controller", "Team")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "reserved.grafana.kubeform.com",
+		Group:   "team.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "IpBlock",
+		Kind:    "ExternalGroup",
 	}:
-		if err := (&controllersreserved.IpBlockReconciler{
+		if err := (&controllersteam.ExternalGroupReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("IpBlock"),
+			Log:              ctrl.Log.WithName("controllers").WithName("ExternalGroup"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_reserved_ip_block"],
-			TypeName:         "metal_reserved_ip_block",
+			Resource:         grafana.Provider().ResourcesMap["grafana_team_external_group"],
+			TypeName:         "grafana_team_external_group",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "IpBlock")
+			setupLog.Error(err, "unable to create controller", "controller", "ExternalGroup")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "spot.grafana.kubeform.com",
+		Group:   "team.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "MarketRequest",
+		Kind:    "Preferences",
 	}:
-		if err := (&controllersspot.MarketRequestReconciler{
+		if err := (&controllersteam.PreferencesReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("MarketRequest"),
+			Log:              ctrl.Log.WithName("controllers").WithName("Preferences"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_spot_market_request"],
-			TypeName:         "metal_spot_market_request",
+			Resource:         grafana.Provider().ResourcesMap["grafana_team_preferences"],
+			TypeName:         "grafana_team_preferences",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "MarketRequest")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "ssh.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Key",
-	}:
-		if err := (&controllersssh.KeyReconciler{
-			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Key"),
-			Scheme:           mgr.GetScheme(),
-			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_ssh_key"],
-			TypeName:         "metal_ssh_key",
-			WatchOnlyDefault: watchOnlyDefault,
-		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Key")
+			setupLog.Error(err, "unable to create controller", "controller", "Preferences")
 			return err
 		}
 	case schema.GroupVersionKind{
 		Group:   "user.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "ApiKey",
+		Kind:    "User",
 	}:
-		if err := (&controllersuser.ApiKeyReconciler{
+		if err := (&controllersuser.UserReconciler{
 			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("ApiKey"),
+			Log:              ctrl.Log.WithName("controllers").WithName("User"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
 			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_user_api_key"],
-			TypeName:         "metal_user_api_key",
+			Resource:         grafana.Provider().ResourcesMap["grafana_user"],
+			TypeName:         "grafana_user",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "ApiKey")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "virtual.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Circuit",
-	}:
-		if err := (&controllersvirtual.CircuitReconciler{
-			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Circuit"),
-			Scheme:           mgr.GetScheme(),
-			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_virtual_circuit"],
-			TypeName:         "metal_virtual_circuit",
-			WatchOnlyDefault: watchOnlyDefault,
-		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Circuit")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "vlan.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Vlan",
-	}:
-		if err := (&controllersvlan.VlanReconciler{
-			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Vlan"),
-			Scheme:           mgr.GetScheme(),
-			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_vlan"],
-			TypeName:         "metal_vlan",
-			WatchOnlyDefault: watchOnlyDefault,
-		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Vlan")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "volume.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Volume",
-	}:
-		if err := (&controllersvolume.VolumeReconciler{
-			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Volume"),
-			Scheme:           mgr.GetScheme(),
-			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_volume"],
-			TypeName:         "metal_volume",
-			WatchOnlyDefault: watchOnlyDefault,
-		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Volume")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "volume.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Attachment",
-	}:
-		if err := (&controllersvolume.AttachmentReconciler{
-			Client:           mgr.GetClient(),
-			Log:              ctrl.Log.WithName("controllers").WithName("Attachment"),
-			Scheme:           mgr.GetScheme(),
-			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["metal_volume_attachment"],
-			TypeName:         "metal_volume_attachment",
-			WatchOnlyDefault: watchOnlyDefault,
-		}).SetupWithManager(ctx, mgr, auditor); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Attachment")
+			setupLog.Error(err, "unable to create controller", "controller", "User")
 			return err
 		}
 
@@ -605,57 +523,66 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 	switch gvk {
 	case schema.GroupVersionKind{
-		Group:   "bgp.grafana.kubeform.com",
+		Group:   "alert.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Session",
+		Kind:    "Notification",
 	}:
-		if err := (&bgpv1alpha1.Session{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Session")
+		if err := (&alertv1alpha1.Notification{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Notification")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "connection.grafana.kubeform.com",
+		Group:   "builtin.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Connection",
+		Kind:    "RoleAssignment",
 	}:
-		if err := (&connectionv1alpha1.Connection{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Connection")
+		if err := (&builtinv1alpha1.RoleAssignment{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "RoleAssignment")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "device.grafana.kubeform.com",
+		Group:   "dashboard.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Device",
+		Kind:    "Dashboard",
 	}:
-		if err := (&devicev1alpha1.Device{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Device")
+		if err := (&dashboardv1alpha1.Dashboard{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Dashboard")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "device.grafana.kubeform.com",
+		Group:   "dashboard.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "NetworkType",
+		Kind:    "Permission",
 	}:
-		if err := (&devicev1alpha1.NetworkType{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "NetworkType")
+		if err := (&dashboardv1alpha1.Permission{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Permission")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "gateway.grafana.kubeform.com",
+		Group:   "data.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Gateway",
+		Kind:    "Source",
 	}:
-		if err := (&gatewayv1alpha1.Gateway{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Gateway")
+		if err := (&datav1alpha1.Source{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Source")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "ip.grafana.kubeform.com",
+		Group:   "folder.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Attachment",
+		Kind:    "Folder",
 	}:
-		if err := (&ipv1alpha1.Attachment{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Attachment")
+		if err := (&folderv1alpha1.Folder{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Folder")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "folder.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Permission",
+	}:
+		if err := (&folderv1alpha1.Permission{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Permission")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -668,111 +595,66 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "port.grafana.kubeform.com",
+		Group:   "role.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "VlanAttachment",
+		Kind:    "Role",
 	}:
-		if err := (&portv1alpha1.VlanAttachment{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "VlanAttachment")
+		if err := (&rolev1alpha1.Role{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Role")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "project.grafana.kubeform.com",
+		Group:   "synthetic.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "Project",
+		Kind:    "MonitoringCheck",
 	}:
-		if err := (&projectv1alpha1.Project{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Project")
+		if err := (&syntheticv1alpha1.MonitoringCheck{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "MonitoringCheck")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "project.grafana.kubeform.com",
+		Group:   "synthetic.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "ApiKey",
+		Kind:    "MonitoringProbe",
 	}:
-		if err := (&projectv1alpha1.ApiKey{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ApiKey")
+		if err := (&syntheticv1alpha1.MonitoringProbe{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "MonitoringProbe")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "project.grafana.kubeform.com",
+		Group:   "team.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "SshKey",
+		Kind:    "Team",
 	}:
-		if err := (&projectv1alpha1.SshKey{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "SshKey")
+		if err := (&teamv1alpha1.Team{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Team")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "reserved.grafana.kubeform.com",
+		Group:   "team.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "IpBlock",
+		Kind:    "ExternalGroup",
 	}:
-		if err := (&reservedv1alpha1.IpBlock{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "IpBlock")
+		if err := (&teamv1alpha1.ExternalGroup{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ExternalGroup")
 			return err
 		}
 	case schema.GroupVersionKind{
-		Group:   "spot.grafana.kubeform.com",
+		Group:   "team.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "MarketRequest",
+		Kind:    "Preferences",
 	}:
-		if err := (&spotv1alpha1.MarketRequest{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "MarketRequest")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "ssh.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Key",
-	}:
-		if err := (&sshv1alpha1.Key{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Key")
+		if err := (&teamv1alpha1.Preferences{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Preferences")
 			return err
 		}
 	case schema.GroupVersionKind{
 		Group:   "user.grafana.kubeform.com",
 		Version: "v1alpha1",
-		Kind:    "ApiKey",
+		Kind:    "User",
 	}:
-		if err := (&userv1alpha1.ApiKey{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ApiKey")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "virtual.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Circuit",
-	}:
-		if err := (&virtualv1alpha1.Circuit{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Circuit")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "vlan.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Vlan",
-	}:
-		if err := (&vlanv1alpha1.Vlan{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Vlan")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "volume.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Volume",
-	}:
-		if err := (&volumev1alpha1.Volume{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Volume")
-			return err
-		}
-	case schema.GroupVersionKind{
-		Group:   "volume.grafana.kubeform.com",
-		Version: "v1alpha1",
-		Kind:    "Attachment",
-	}:
-		if err := (&volumev1alpha1.Attachment{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Attachment")
+		if err := (&userv1alpha1.User{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "User")
 			return err
 		}
 
