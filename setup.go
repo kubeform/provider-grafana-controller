@@ -63,6 +63,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+var _provider = grafana.Provider()
+
 var runningControllers = struct {
 	sync.RWMutex
 	mp map[schema.GroupVersionKind]bool
@@ -252,8 +254,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Notification"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_alert_notification"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_alert_notification"],
 			TypeName:         "grafana_alert_notification",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -270,8 +272,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("RoleAssignment"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_builtin_role_assignment"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_builtin_role_assignment"],
 			TypeName:         "grafana_builtin_role_assignment",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -288,8 +290,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Dashboard"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_dashboard"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_dashboard"],
 			TypeName:         "grafana_dashboard",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -306,8 +308,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Permission"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_dashboard_permission"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_dashboard_permission"],
 			TypeName:         "grafana_dashboard_permission",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -324,8 +326,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Source"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_data_source"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_data_source"],
 			TypeName:         "grafana_data_source",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -342,8 +344,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Folder"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_folder"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_folder"],
 			TypeName:         "grafana_folder",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -360,8 +362,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Permission"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_folder_permission"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_folder_permission"],
 			TypeName:         "grafana_folder_permission",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -378,8 +380,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Organization"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_organization"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_organization"],
 			TypeName:         "grafana_organization",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -396,8 +398,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Role"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_role"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_role"],
 			TypeName:         "grafana_role",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -414,8 +416,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("MonitoringCheck"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_synthetic_monitoring_check"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_synthetic_monitoring_check"],
 			TypeName:         "grafana_synthetic_monitoring_check",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -432,8 +434,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("MonitoringProbe"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_synthetic_monitoring_probe"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_synthetic_monitoring_probe"],
 			TypeName:         "grafana_synthetic_monitoring_probe",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -450,8 +452,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Team"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_team"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_team"],
 			TypeName:         "grafana_team",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -468,8 +470,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("ExternalGroup"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_team_external_group"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_team_external_group"],
 			TypeName:         "grafana_team_external_group",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -486,8 +488,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("Preferences"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_team_preferences"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_team_preferences"],
 			TypeName:         "grafana_team_preferences",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
@@ -504,8 +506,8 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			Log:              ctrl.Log.WithName("controllers").WithName("User"),
 			Scheme:           mgr.GetScheme(),
 			Gvk:              gvk,
-			Provider:         grafana.Provider(),
-			Resource:         grafana.Provider().ResourcesMap["grafana_user"],
+			Provider:         _provider,
+			Resource:         _provider.ResourcesMap["grafana_user"],
 			TypeName:         "grafana_user",
 			WatchOnlyDefault: watchOnlyDefault,
 		}).SetupWithManager(ctx, mgr, auditor); err != nil {
