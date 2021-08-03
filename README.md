@@ -3,7 +3,7 @@
 
 # provider-grafana-controller
 
-Kubeform controller for [Terraform Grafana Provider](https://github.com/equinix/terraform-provider-metal)
+Kubeform controller for [Terraform Grafana Provider](https://github.com/grafana/terraform-provider-grafana)
 
 ## Installation
 
