@@ -1598,8 +1598,8 @@ kmodules.xyz/resource-metadata v0.5.7 h1:5xjq5pEp5hZK+jdkY/4wGk/FMtTyvQ9LlErh7lQ
 kmodules.xyz/resource-metadata v0.5.7/go.mod h1:Jdi7zBXRwwFTOR0CxwKxqJhsDVIilhrgNipPjnKLyrs=
 kubeform.dev/apimachinery v0.0.0-20210629153539-7bcd34a30eb5 h1:kpCzsugm64OMYV9ywBIOXbGN7z5ifK+rnGln+f3Gct4=
 kubeform.dev/apimachinery v0.0.0-20210629153539-7bcd34a30eb5/go.mod h1:kfiYdu87pCcrydTGaLXs4QMFx1fLNP5Yov2KxgrkCm0=
-kubeform.dev/provider-grafana-api v0.3.0 h1:+p47ahVTBcn9jLuIsYK9Z9V8tVP8vcj+IN2cYuOAEnA=
-kubeform.dev/provider-grafana-api v0.3.0/go.mod h1:OBHcejWdiObzXdkhWfKpa7b3dfIJcXV3eOU6YAswV8A=
+kubeform.dev/provider-grafana-api v0.3.1-0.20210804225443-07102b499472 h1:N7cRluyk0gN4Jy2dEdh3s86bwQRkMBWDMLPn5mhDdxo=
+kubeform.dev/provider-grafana-api v0.3.1-0.20210804225443-07102b499472/go.mod h1:OBHcejWdiObzXdkhWfKpa7b3dfIJcXV3eOU6YAswV8A=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
 rsc.io/pdf v0.1.1/go.mod h1:n8OzWcQ6Sp37PL01nO98y4iUCRdTGarVfzxY20ICaU4=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
