@@ -866,7 +866,7 @@ kmodules.xyz/resource-metadata/pkg/graph
 ## explicit
 kubeform.dev/apimachinery/api/v1alpha1
 kubeform.dev/apimachinery/pkg/util
-# kubeform.dev/provider-grafana-api v0.3.1-0.20210825085024-a4bec3c822c4
+# kubeform.dev/provider-grafana-api v0.3.1-0.20210825090246-2807e1616c67
 ## explicit
 kubeform.dev/provider-grafana-api/api/provider
 kubeform.dev/provider-grafana-api/apis/alert
