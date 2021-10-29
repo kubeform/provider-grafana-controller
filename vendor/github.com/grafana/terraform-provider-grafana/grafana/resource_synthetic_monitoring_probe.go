@@ -79,7 +79,7 @@ Grafana Synthetic Monitoring Agent.
 				},
 			},
 			"public": {
-				Description: "Public probes are run by Grafana Labs and can be used by all users. You must be an admin to set this to `true`.",
+				Description: "Public probes are run by Grafana Labs and can be used by all users. Only Grafana Labs managed public probes will be set to `true`.",
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
@@ -164,7 +164,6 @@ func resourceSyntheticMonitoringProbeDelete(ctx context.Context, d *schema.Resou
 // makeProbe populates an instance of sm.Probe. We need this for create and
 // update calls with the SM API client.
 func makeProbe(d *schema.ResourceData) *sm.Probe {
-
 	var id int64
 	if d.Id() != "" {
 		id, _ = strconv.ParseInt(d.Id(), 10, 64)
