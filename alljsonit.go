@@ -39,130 +39,128 @@ type Data struct {
 	ResourceType string
 }
 
-var (
-	allJsonIt = map[schema.GroupVersionResource]Data{
-		{
-			Group:    "alert.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "notifications",
-		}: {
-			JsonIt:       controllers.GetJSONItr(alertv1alpha1.GetEncoder(), alertv1alpha1.GetDecoder()),
-			ResourceType: "grafana_alert_notification",
-		},
-		{
-			Group:    "builtin.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "roleassignments",
-		}: {
-			JsonIt:       controllers.GetJSONItr(builtinv1alpha1.GetEncoder(), builtinv1alpha1.GetDecoder()),
-			ResourceType: "grafana_builtin_role_assignment",
-		},
-		{
-			Group:    "dashboard.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "dashboards",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dashboardv1alpha1.GetEncoder(), dashboardv1alpha1.GetDecoder()),
-			ResourceType: "grafana_dashboard",
-		},
-		{
-			Group:    "dashboard.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "permissions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(dashboardv1alpha1.GetEncoder(), dashboardv1alpha1.GetDecoder()),
-			ResourceType: "grafana_dashboard_permission",
-		},
-		{
-			Group:    "data.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "sources",
-		}: {
-			JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
-			ResourceType: "grafana_data_source",
-		},
-		{
-			Group:    "folder.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "folders",
-		}: {
-			JsonIt:       controllers.GetJSONItr(folderv1alpha1.GetEncoder(), folderv1alpha1.GetDecoder()),
-			ResourceType: "grafana_folder",
-		},
-		{
-			Group:    "folder.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "permissions",
-		}: {
-			JsonIt:       controllers.GetJSONItr(folderv1alpha1.GetEncoder(), folderv1alpha1.GetDecoder()),
-			ResourceType: "grafana_folder_permission",
-		},
-		{
-			Group:    "organization.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "organizations",
-		}: {
-			JsonIt:       controllers.GetJSONItr(organizationv1alpha1.GetEncoder(), organizationv1alpha1.GetDecoder()),
-			ResourceType: "grafana_organization",
-		},
-		{
-			Group:    "role.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "roles",
-		}: {
-			JsonIt:       controllers.GetJSONItr(rolev1alpha1.GetEncoder(), rolev1alpha1.GetDecoder()),
-			ResourceType: "grafana_role",
-		},
-		{
-			Group:    "synthetic.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "monitoringchecks",
-		}: {
-			JsonIt:       controllers.GetJSONItr(syntheticv1alpha1.GetEncoder(), syntheticv1alpha1.GetDecoder()),
-			ResourceType: "grafana_synthetic_monitoring_check",
-		},
-		{
-			Group:    "synthetic.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "monitoringprobes",
-		}: {
-			JsonIt:       controllers.GetJSONItr(syntheticv1alpha1.GetEncoder(), syntheticv1alpha1.GetDecoder()),
-			ResourceType: "grafana_synthetic_monitoring_probe",
-		},
-		{
-			Group:    "team.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "teams",
-		}: {
-			JsonIt:       controllers.GetJSONItr(teamv1alpha1.GetEncoder(), teamv1alpha1.GetDecoder()),
-			ResourceType: "grafana_team",
-		},
-		{
-			Group:    "team.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "externalgroups",
-		}: {
-			JsonIt:       controllers.GetJSONItr(teamv1alpha1.GetEncoder(), teamv1alpha1.GetDecoder()),
-			ResourceType: "grafana_team_external_group",
-		},
-		{
-			Group:    "team.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "preferences",
-		}: {
-			JsonIt:       controllers.GetJSONItr(teamv1alpha1.GetEncoder(), teamv1alpha1.GetDecoder()),
-			ResourceType: "grafana_team_preferences",
-		},
-		{
-			Group:    "user.grafana.kubeform.com",
-			Version:  "v1alpha1",
-			Resource: "users",
-		}: {
-			JsonIt:       controllers.GetJSONItr(userv1alpha1.GetEncoder(), userv1alpha1.GetDecoder()),
-			ResourceType: "grafana_user",
-		},
-	}
-)
+var allJsonIt = map[schema.GroupVersionResource]Data{
+	{
+		Group:    "alert.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "notifications",
+	}: {
+		JsonIt:       controllers.GetJSONItr(alertv1alpha1.GetEncoder(), alertv1alpha1.GetDecoder()),
+		ResourceType: "grafana_alert_notification",
+	},
+	{
+		Group:    "builtin.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "roleassignments",
+	}: {
+		JsonIt:       controllers.GetJSONItr(builtinv1alpha1.GetEncoder(), builtinv1alpha1.GetDecoder()),
+		ResourceType: "grafana_builtin_role_assignment",
+	},
+	{
+		Group:    "dashboard.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "dashboards",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dashboardv1alpha1.GetEncoder(), dashboardv1alpha1.GetDecoder()),
+		ResourceType: "grafana_dashboard",
+	},
+	{
+		Group:    "dashboard.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "permissions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(dashboardv1alpha1.GetEncoder(), dashboardv1alpha1.GetDecoder()),
+		ResourceType: "grafana_dashboard_permission",
+	},
+	{
+		Group:    "data.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sources",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "grafana_data_source",
+	},
+	{
+		Group:    "folder.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "folders",
+	}: {
+		JsonIt:       controllers.GetJSONItr(folderv1alpha1.GetEncoder(), folderv1alpha1.GetDecoder()),
+		ResourceType: "grafana_folder",
+	},
+	{
+		Group:    "folder.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "permissions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(folderv1alpha1.GetEncoder(), folderv1alpha1.GetDecoder()),
+		ResourceType: "grafana_folder_permission",
+	},
+	{
+		Group:    "organization.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "organizations",
+	}: {
+		JsonIt:       controllers.GetJSONItr(organizationv1alpha1.GetEncoder(), organizationv1alpha1.GetDecoder()),
+		ResourceType: "grafana_organization",
+	},
+	{
+		Group:    "role.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "roles",
+	}: {
+		JsonIt:       controllers.GetJSONItr(rolev1alpha1.GetEncoder(), rolev1alpha1.GetDecoder()),
+		ResourceType: "grafana_role",
+	},
+	{
+		Group:    "synthetic.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "monitoringchecks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(syntheticv1alpha1.GetEncoder(), syntheticv1alpha1.GetDecoder()),
+		ResourceType: "grafana_synthetic_monitoring_check",
+	},
+	{
+		Group:    "synthetic.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "monitoringprobes",
+	}: {
+		JsonIt:       controllers.GetJSONItr(syntheticv1alpha1.GetEncoder(), syntheticv1alpha1.GetDecoder()),
+		ResourceType: "grafana_synthetic_monitoring_probe",
+	},
+	{
+		Group:    "team.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "teams",
+	}: {
+		JsonIt:       controllers.GetJSONItr(teamv1alpha1.GetEncoder(), teamv1alpha1.GetDecoder()),
+		ResourceType: "grafana_team",
+	},
+	{
+		Group:    "team.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "externalgroups",
+	}: {
+		JsonIt:       controllers.GetJSONItr(teamv1alpha1.GetEncoder(), teamv1alpha1.GetDecoder()),
+		ResourceType: "grafana_team_external_group",
+	},
+	{
+		Group:    "team.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "preferences",
+	}: {
+		JsonIt:       controllers.GetJSONItr(teamv1alpha1.GetEncoder(), teamv1alpha1.GetDecoder()),
+		ResourceType: "grafana_team_preferences",
+	},
+	{
+		Group:    "user.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "users",
+	}: {
+		JsonIt:       controllers.GetJSONItr(userv1alpha1.GetEncoder(), userv1alpha1.GetDecoder()),
+		ResourceType: "grafana_user",
+	},
+}
 
 func getJsonItAndResType(gvr schema.GroupVersionResource) Data {
 	return allJsonIt[gvr]
