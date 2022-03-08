@@ -22,11 +22,17 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	alertv1alpha1 "kubeform.dev/provider-grafana-api/apis/alert/v1alpha1"
+	apikeyv1alpha1 "kubeform.dev/provider-grafana-api/apis/apikey/v1alpha1"
 	builtinv1alpha1 "kubeform.dev/provider-grafana-api/apis/builtin/v1alpha1"
+	cloudv1alpha1 "kubeform.dev/provider-grafana-api/apis/cloud/v1alpha1"
 	dashboardv1alpha1 "kubeform.dev/provider-grafana-api/apis/dashboard/v1alpha1"
 	datav1alpha1 "kubeform.dev/provider-grafana-api/apis/data/v1alpha1"
 	folderv1alpha1 "kubeform.dev/provider-grafana-api/apis/folder/v1alpha1"
+	libraryv1alpha1 "kubeform.dev/provider-grafana-api/apis/library/v1alpha1"
+	machinev1alpha1 "kubeform.dev/provider-grafana-api/apis/machine/v1alpha1"
 	organizationv1alpha1 "kubeform.dev/provider-grafana-api/apis/organization/v1alpha1"
+	playlistv1alpha1 "kubeform.dev/provider-grafana-api/apis/playlist/v1alpha1"
+	reportv1alpha1 "kubeform.dev/provider-grafana-api/apis/report/v1alpha1"
 	rolev1alpha1 "kubeform.dev/provider-grafana-api/apis/role/v1alpha1"
 	syntheticv1alpha1 "kubeform.dev/provider-grafana-api/apis/synthetic/v1alpha1"
 	teamv1alpha1 "kubeform.dev/provider-grafana-api/apis/team/v1alpha1"
@@ -49,12 +55,28 @@ var allJsonIt = map[schema.GroupVersionResource]Data{
 		ResourceType: "grafana_alert_notification",
 	},
 	{
+		Group:    "apikey.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "apikeys",
+	}: {
+		JsonIt:       controllers.GetJSONItr(apikeyv1alpha1.GetEncoder(), apikeyv1alpha1.GetDecoder()),
+		ResourceType: "grafana_api_key",
+	},
+	{
 		Group:    "builtin.grafana.kubeform.com",
 		Version:  "v1alpha1",
 		Resource: "roleassignments",
 	}: {
 		JsonIt:       controllers.GetJSONItr(builtinv1alpha1.GetEncoder(), builtinv1alpha1.GetDecoder()),
 		ResourceType: "grafana_builtin_role_assignment",
+	},
+	{
+		Group:    "cloud.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "stacks",
+	}: {
+		JsonIt:       controllers.GetJSONItr(cloudv1alpha1.GetEncoder(), cloudv1alpha1.GetDecoder()),
+		ResourceType: "grafana_cloud_stack",
 	},
 	{
 		Group:    "dashboard.grafana.kubeform.com",
@@ -81,6 +103,14 @@ var allJsonIt = map[schema.GroupVersionResource]Data{
 		ResourceType: "grafana_data_source",
 	},
 	{
+		Group:    "data.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "sourcepermissions",
+	}: {
+		JsonIt:       controllers.GetJSONItr(datav1alpha1.GetEncoder(), datav1alpha1.GetDecoder()),
+		ResourceType: "grafana_data_source_permission",
+	},
+	{
 		Group:    "folder.grafana.kubeform.com",
 		Version:  "v1alpha1",
 		Resource: "folders",
@@ -97,12 +127,44 @@ var allJsonIt = map[schema.GroupVersionResource]Data{
 		ResourceType: "grafana_folder_permission",
 	},
 	{
+		Group:    "library.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "panels",
+	}: {
+		JsonIt:       controllers.GetJSONItr(libraryv1alpha1.GetEncoder(), libraryv1alpha1.GetDecoder()),
+		ResourceType: "grafana_library_panel",
+	},
+	{
+		Group:    "machine.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "learningjobs",
+	}: {
+		JsonIt:       controllers.GetJSONItr(machinev1alpha1.GetEncoder(), machinev1alpha1.GetDecoder()),
+		ResourceType: "grafana_machine_learning_job",
+	},
+	{
 		Group:    "organization.grafana.kubeform.com",
 		Version:  "v1alpha1",
 		Resource: "organizations",
 	}: {
 		JsonIt:       controllers.GetJSONItr(organizationv1alpha1.GetEncoder(), organizationv1alpha1.GetDecoder()),
 		ResourceType: "grafana_organization",
+	},
+	{
+		Group:    "playlist.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "playlists",
+	}: {
+		JsonIt:       controllers.GetJSONItr(playlistv1alpha1.GetEncoder(), playlistv1alpha1.GetDecoder()),
+		ResourceType: "grafana_playlist",
+	},
+	{
+		Group:    "report.grafana.kubeform.com",
+		Version:  "v1alpha1",
+		Resource: "reports",
+	}: {
+		JsonIt:       controllers.GetJSONItr(reportv1alpha1.GetEncoder(), reportv1alpha1.GetDecoder()),
+		ResourceType: "grafana_report",
 	},
 	{
 		Group:    "role.grafana.kubeform.com",

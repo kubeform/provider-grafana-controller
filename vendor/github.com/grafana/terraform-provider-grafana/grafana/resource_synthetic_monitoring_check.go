@@ -2,6 +2,7 @@ package grafana
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -92,6 +93,13 @@ var (
 				Optional:    true,
 				MaxItems:    1,
 				Elem:        syntheticMonitoringCheckSettingsTCP,
+			},
+			"traceroute": {
+				Description: "Settings for traceroute check. The target must be a valid hostname or IP address",
+				Type:        schema.TypeSet,
+				Optional:    true,
+				MaxItems:    1,
+				Elem:        syntheticMonitoringCheckSettingsTraceroute,
 			},
 		},
 	}
@@ -394,6 +402,29 @@ var (
 			},
 		},
 	}
+
+	syntheticMonitoringCheckSettingsTraceroute = &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"max_hops": {
+				Description: "Maximum TTL for the trace",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     64,
+			},
+			"max_unknown_hops": {
+				Description: "Maximum number of hosts to travers that give no response",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     15,
+			},
+			"ptr_lookup": {
+				Description: "Reverse lookup hostnames from IP addresses",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+			},
+		},
+	}
 )
 
 func resourceSyntheticMonitoringCheck() *schema.Resource {
@@ -416,6 +447,7 @@ multiple checks for a single endpoint to check different capabilities.
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: resourceSyntheticMonitoringCheckCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -491,7 +523,7 @@ multiple checks for a single endpoint to check different capabilities.
 				},
 			},
 			"settings": {
-				Description: "Check settings.",
+				Description: "Check settings. Should contain exactly one nested block.",
 				Type:        schema.TypeSet,
 				Required:    true,
 				MaxItems:    1,
@@ -515,17 +547,13 @@ func resourceSyntheticMonitoringCheckCreate(ctx context.Context, d *schema.Resou
 
 func resourceSyntheticMonitoringCheckRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	c := meta.(*client).smapi
-	var diags diag.Diagnostics
-	chks, err := c.ListChecks(ctx)
+	id, err := strconv.ParseInt(d.Id(), 10, 64)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	var chk sm.Check
-	for _, c := range chks {
-		if strconv.FormatInt(c.Id, 10) == d.Id() {
-			chk = c
-			break
-		}
+	chk, err := c.GetCheck(ctx, id)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.Set("tenant_id", chk.TenantId)
@@ -700,11 +728,25 @@ func resourceSyntheticMonitoringCheckRead(ctx context.Context, d *schema.Resourc
 		settings.Add(map[string]interface{}{
 			"tcp": tcp,
 		})
+	case chk.Settings.Traceroute != nil:
+		traceroute := schema.NewSet(
+			schema.HashResource(syntheticMonitoringCheckSettingsTraceroute),
+			[]interface{}{},
+		)
+
+		traceroute.Add(map[string]interface{}{
+			"max_hops":         int(chk.Settings.Traceroute.MaxHops),
+			"max_unknown_hops": int(chk.Settings.Traceroute.MaxUnknownHops),
+			"ptr_lookup":       chk.Settings.Traceroute.PtrLookup,
+		})
+		settings.Add(map[string]interface{}{
+			"traceroute": traceroute,
+		})
 	}
 
 	d.Set("settings", settings)
 
-	return diags
+	return nil
 }
 
 func resourceSyntheticMonitoringCheckUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -899,5 +941,38 @@ func makeCheckSettings(settings map[string]interface{}) sm.CheckSettings {
 		}
 	}
 
+	traceroute := settings["traceroute"].(*schema.Set).List()
+	if len(traceroute) > 0 {
+		t := traceroute[0].(map[string]interface{})
+		cs.Traceroute = &sm.TracerouteSettings{
+			MaxHops:        int64(t["max_hops"].(int)),
+			MaxUnknownHops: int64(t["max_unknown_hops"].(int)),
+			PtrLookup:      t["ptr_lookup"].(bool),
+		}
+	}
+
 	return cs
+}
+
+// Check if the user provider exactly one setting
+// Ideally, we'd use `ExactlyOneOf` here but it doesn't support TypeSet.
+// Also, TypeSet doesn't support ValidateFunc.
+// To maintain backwards compatibility, we do a custom validation in the CustomizeDiff function.
+func resourceSyntheticMonitoringCheckCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	settingsList := diff.Get("settings").(*schema.Set).List()
+	if len(settingsList) == 0 {
+		return fmt.Errorf("at least one check setting must be defined")
+	}
+	settings := settingsList[0].(map[string]interface{})
+
+	count := 0
+	for k := range syntheticMonitoringCheckSettings.Schema {
+		count += len(settings[k].(*schema.Set).List())
+	}
+
+	if count != 1 {
+		return fmt.Errorf("exactly one check setting must be defined, got %d", count)
+	}
+
+	return nil
 }

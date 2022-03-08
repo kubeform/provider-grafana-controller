@@ -2,6 +2,7 @@ package grafana
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -25,10 +26,29 @@ The required arguments for this resource vary depending on the type of data
 source selected (via the 'type' argument).
 `,
 
-		CreateContext: CreateDataSource,
-		UpdateContext: UpdateDataSource,
-		DeleteContext: DeleteDataSource,
-		ReadContext:   ReadDataSource,
+		CreateContext:  CreateDataSource,
+		UpdateContext:  UpdateDataSource,
+		DeleteContext:  DeleteDataSource,
+		ReadContext:    ReadDataSource,
+		StateUpgraders: []schema.StateUpgrader{resourceDataSourceV0Upgrader},
+		SchemaVersion:  1,
+
+		// Import either by ID or UID
+		Importer: &schema.ResourceImporter{
+			StateContext: func(c context.Context, rd *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				_, err := strconv.ParseInt(rd.Id(), 10, 64)
+				if err != nil {
+					// If the ID is not a number, then it may be a UID
+					client := meta.(*client).gapi
+					ds, err := client.DataSourceByUID(rd.Id())
+					if err != nil {
+						return nil, fmt.Errorf("failed to find datasource by ID or UID '%s': %w", rd.Id(), err)
+					}
+					rd.SetId(strconv.FormatInt(ds.ID, 10))
+				}
+				return []*schema.ResourceData{rd}, nil
+			},
+		},
 
 		Schema: map[string]*schema.Schema{
 			"access_mode": {
@@ -62,11 +82,26 @@ source selected (via the 'type' argument).
 				Default:     "",
 				Description: "(Required by some data source types) The name of the database to use on the selected data source server.",
 			},
+			"http_headers": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "Custom HTTP headers",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"is_default": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
 				Description: "Whether to set the data source as default. This should only be `true` to a single data source.",
+			},
+			"uid": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Unique identifier. If unset, this will be automatically generated.",
 			},
 			"json_data": {
 				Type:        schema.TypeList,
@@ -77,17 +112,22 @@ source selected (via the 'type' argument).
 						"assume_role_arn": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "(CloudWatch) The ARN of the role to be assumed by Grafana when using the CloudWatch data source.",
+							Description: "(CloudWatch, Athena) The ARN of the role to be assumed by Grafana when using the CloudWatch or Athena data source.",
 						},
 						"auth_type": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "(CloudWatch) The authentication type used to access the data source.",
+							Description: "(CloudWatch, Athena) The authentication type used to access the data source.",
 						},
 						"authentication_type": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Description: "(Stackdriver) The authentication type: `jwt` or `gce`.",
+						},
+						"catalog": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(Athena) Athena catalog.",
 						},
 						"client_email": {
 							Type:        schema.TypeString,
@@ -104,6 +144,16 @@ source selected (via the 'type' argument).
 							Optional:    true,
 							Description: "(CloudWatch) A comma-separated list of custom namespaces to be queried by the CloudWatch data source.",
 						},
+						"database": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(Athena) Name of the database within the catalog.",
+						},
+						"default_bucket": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(InfluxDB) The default bucket for the data source.",
+						},
 						"default_project": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -112,7 +162,32 @@ source selected (via the 'type' argument).
 						"default_region": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "(CloudWatch) The default region for the data source.",
+							Description: "(CloudWatch, Athena) The default region for the data source.",
+						},
+						"derived_field": {
+							Type: schema.TypeList,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"matcher_regex": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"url": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"datasource_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+							Optional:    true,
+							Description: "(Loki) See https://grafana.com/docs/grafana/latest/datasources/loki/#derived-fields",
 						},
 						"encrypt": {
 							Type:        schema.TypeString,
@@ -135,6 +210,16 @@ source selected (via the 'type' argument).
 								}
 								return diags
 							},
+						},
+						"external_id": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(CloudWatch, Athena) If you are assuming a role in another account, that has been created with an external ID, specify the external ID here.",
+						},
+						"github_url": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(Github) Github URL",
 						},
 						"graphite_version": {
 							Type:        schema.TypeString,
@@ -171,10 +256,30 @@ source selected (via the 'type' argument).
 							Optional:    true,
 							Description: "(MySQL, PostgreSQL and MSSQL) Maximum number of connections in the idle connection pool (Grafana v5.4+).",
 						},
+						"max_lines": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "(Loki) Upper limit for the number of log lines returned by Loki ",
+						},
 						"max_open_conns": {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Description: "(MySQL, PostgreSQL and MSSQL) Maximum number of open connections to the database (Grafana v5.4+).",
+						},
+						"organization": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(InfluxDB) An organization is a workspace for a group of users. All dashboards, tasks, buckets, members, etc., belong to an organization.",
+						},
+						"org_slug": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(Sentry) Organization slug.",
+						},
+						"output_location": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(Athena) AWS S3 bucket to store execution outputs. If not specified, the default query result location from the Workgroup configuration will be used.",
 						},
 						"postgres_version": {
 							Type:        schema.TypeInt,
@@ -184,7 +289,7 @@ source selected (via the 'type' argument).
 						"profile": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "(CloudWatch) The credentials profile name to use when authentication type is set as 'Credentials file'.",
+							Description: "(CloudWatch, Athena) The credentials profile name to use when authentication type is set as 'Credentials file'.",
 						},
 						"query_timeout": {
 							Type:        schema.TypeString,
@@ -262,14 +367,24 @@ source selected (via the 'type' argument).
 							Description: "(Stackdriver) The token URI used, provided in the service account key.",
 						},
 						"tsdb_resolution": {
-							Type:        schema.TypeString,
+							Type:        schema.TypeInt,
 							Optional:    true,
 							Description: "(OpenTSDB) Resolution.",
 						},
 						"tsdb_version": {
-							Type:        schema.TypeString,
+							Type:        schema.TypeInt,
 							Optional:    true,
 							Description: "(OpenTSDB) Version.",
+						},
+						"version": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(InfluxDB) InfluxQL or Flux.",
+						},
+						"workgroup": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "(Athena) Workgroup to use.",
 						},
 					},
 				},
@@ -297,7 +412,19 @@ source selected (via the 'type' argument).
 							Type:        schema.TypeString,
 							Optional:    true,
 							Sensitive:   true,
-							Description: "(CloudWatch) The access key to use to access the data source.",
+							Description: "(CloudWatch, Athena) The access key to use to access the data source.",
+						},
+						"access_token": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Sensitive:   true,
+							Description: "(Github) The access token to use to access the data source",
+						},
+						"auth_token": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Sensitive:   true,
+							Description: "(Sentry) Authorization token.",
 						},
 						"basic_auth_password": {
 							Type:        schema.TypeString,
@@ -321,7 +448,7 @@ source selected (via the 'type' argument).
 							Type:        schema.TypeString,
 							Optional:    true,
 							Sensitive:   true,
-							Description: "(CloudWatch) The secret key to use to access the data source.",
+							Description: "(CloudWatch, Athena) The secret key to use to access the data source.",
 						},
 						"sigv4_access_key": {
 							Type:        schema.TypeString,
@@ -439,6 +566,7 @@ func ReadDataSource(ctx context.Context, d *schema.ResourceData, meta interface{
 	d.Set("type", dataSource.Type)
 	d.Set("url", dataSource.URL)
 	d.Set("username", dataSource.User)
+	d.Set("uid", dataSource.UID)
 
 	// TODO: these fields should be migrated to SecureJSONData.
 	d.Set("basic_auth_enabled", dataSource.BasicAuth)
@@ -474,6 +602,11 @@ func makeDataSource(d *schema.ResourceData) (*gapi.DataSource, error) {
 		id, err = strconv.ParseInt(idStr, 10, 64)
 	}
 
+	httpHeaders := make(map[string]string)
+	for key, value := range d.Get("http_headers").(map[string]interface{}) {
+		httpHeaders[key] = fmt.Sprintf("%v", value)
+	}
+
 	return &gapi.DataSource{
 		ID:                id,
 		Name:              d.Get("name").(string),
@@ -487,23 +620,41 @@ func makeDataSource(d *schema.ResourceData) (*gapi.DataSource, error) {
 		BasicAuth:         d.Get("basic_auth_enabled").(bool),
 		BasicAuthUser:     d.Get("basic_auth_username").(string),
 		BasicAuthPassword: d.Get("basic_auth_password").(string),
+		UID:               d.Get("uid").(string),
+		HTTPHeaders:       httpHeaders,
 		JSONData:          makeJSONData(d),
 		SecureJSONData:    makeSecureJSONData(d),
 	}, err
 }
 
 func makeJSONData(d *schema.ResourceData) gapi.JSONData {
+	var derivedFields []gapi.LokiDerivedField
+	for _, field := range d.Get("json_data.0.derived_field").([]interface{}) {
+		derivedField := field.(map[string]interface{})
+		derivedFields = append(derivedFields, gapi.LokiDerivedField{
+			Name:          derivedField["name"].(string),
+			MatcherRegex:  derivedField["matcher_regex"].(string),
+			URL:           derivedField["url"].(string),
+			DatasourceUID: derivedField["datasource_uid"].(string),
+		})
+	}
+
 	return gapi.JSONData{
 		AssumeRoleArn:              d.Get("json_data.0.assume_role_arn").(string),
 		AuthType:                   d.Get("json_data.0.auth_type").(string),
 		AuthenticationType:         d.Get("json_data.0.authentication_type").(string),
+		Catalog:                    d.Get("json_data.0.catalog").(string),
 		ClientEmail:                d.Get("json_data.0.client_email").(string),
 		ConnMaxLifetime:            int64(d.Get("json_data.0.conn_max_lifetime").(int)),
 		CustomMetricsNamespaces:    d.Get("json_data.0.custom_metrics_namespaces").(string),
+		Database:                   d.Get("json_data.0.database").(string),
+		DefaultBucket:              d.Get("json_data.0.default_bucket").(string),
 		DefaultProject:             d.Get("json_data.0.default_project").(string),
 		DefaultRegion:              d.Get("json_data.0.default_region").(string),
+		DerivedFields:              derivedFields,
 		Encrypt:                    d.Get("json_data.0.encrypt").(string),
 		EsVersion:                  d.Get("json_data.0.es_version").(string),
+		ExternalID:                 d.Get("json_data.0.external_id").(string),
 		GraphiteVersion:            d.Get("json_data.0.graphite_version").(string),
 		HTTPMethod:                 d.Get("json_data.0.http_method").(string),
 		Interval:                   d.Get("json_data.0.interval").(string),
@@ -511,7 +662,11 @@ func makeJSONData(d *schema.ResourceData) gapi.JSONData {
 		LogMessageField:            d.Get("json_data.0.log_message_field").(string),
 		MaxConcurrentShardRequests: int64(d.Get("json_data.0.max_concurrent_shard_requests").(int)),
 		MaxIdleConns:               int64(d.Get("json_data.0.max_idle_conns").(int)),
+		MaxLines:                   d.Get("json_data.0.max_lines").(int),
 		MaxOpenConns:               int64(d.Get("json_data.0.max_open_conns").(int)),
+		Organization:               d.Get("json_data.0.organization").(string),
+		OrgSlug:                    d.Get("json_data.0.org_slug").(string),
+		OutputLocation:             d.Get("json_data.0.output_location").(string),
 		PostgresVersion:            int64(d.Get("json_data.0.postgres_version").(int)),
 		Profile:                    d.Get("json_data.0.profile").(string),
 		QueryTimeout:               d.Get("json_data.0.query_timeout").(string),
@@ -529,14 +684,17 @@ func makeJSONData(d *schema.ResourceData) gapi.JSONData {
 		TLSAuthWithCACert:          d.Get("json_data.0.tls_auth_with_ca_cert").(bool),
 		TLSSkipVerify:              d.Get("json_data.0.tls_skip_verify").(bool),
 		TokenURI:                   d.Get("json_data.0.token_uri").(string),
-		TsdbResolution:             d.Get("json_data.0.tsdb_resolution").(string),
-		TsdbVersion:                d.Get("json_data.0.tsdb_version").(string),
+		TsdbResolution:             int64(d.Get("json_data.0.tsdb_resolution").(int)),
+		TsdbVersion:                int64(d.Get("json_data.0.tsdb_version").(int)),
+		Version:                    d.Get("json_data.0.version").(string),
+		Workgroup:                  d.Get("json_data.0.workgroup").(string),
 	}
 }
 
 func makeSecureJSONData(d *schema.ResourceData) gapi.SecureJSONData {
 	return gapi.SecureJSONData{
 		AccessKey:         d.Get("secure_json_data.0.access_key").(string),
+		AuthToken:         d.Get("secure_json_data.0.auth_token").(string),
 		BasicAuthPassword: d.Get("secure_json_data.0.basic_auth_password").(string),
 		Password:          d.Get("secure_json_data.0.password").(string),
 		PrivateKey:        d.Get("secure_json_data.0.private_key").(string),
@@ -547,4 +705,60 @@ func makeSecureJSONData(d *schema.ResourceData) gapi.SecureJSONData {
 		TLSClientCert:     d.Get("secure_json_data.0.tls_client_cert").(string),
 		TLSClientKey:      d.Get("secure_json_data.0.tls_client_key").(string),
 	}
+}
+
+// TSDB Version and Resolution used to be strings, but now are integers.
+func resourceDataSourceV0Schema() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"json_data": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"tsdb_resolution": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "(OpenTSDB) Resolution.",
+						},
+						"tsdb_version": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "(OpenTSDB) Version.",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+var resourceDataSourceV0Upgrader = schema.StateUpgrader{
+	Version: 0,
+	Type:    resourceDataSourceV0Schema().CoreConfigSchema().ImpliedType(),
+	Upgrade: func(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+		convertToInt := func(m map[string]interface{}, key string) {
+			if value, hasValue := m[key]; hasValue {
+				m[key] = 0
+				if valueStr, ok := value.(string); ok {
+					if valueInt, err := strconv.Atoi(valueStr); err == nil {
+						m[key] = valueInt
+					}
+				}
+			}
+		}
+
+		var jsonData map[string]interface{}
+		if jsonDataList, ok := rawState["json_data"].([]interface{}); ok && len(jsonDataList) > 0 {
+			jsonData = jsonDataList[0].(map[string]interface{})
+		} else if jsonDataMap, ok := rawState["json_data"].(map[string]interface{}); ok {
+			jsonData = jsonDataMap
+		}
+		if jsonData != nil {
+			convertToInt(jsonData, "tsdb_version")
+			convertToInt(jsonData, "tsdb_resolution")
+		}
+
+		return rawState, nil
+	},
 }
