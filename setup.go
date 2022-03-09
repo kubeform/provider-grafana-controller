@@ -40,21 +40,33 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	alertv1alpha1 "kubeform.dev/provider-grafana-api/apis/alert/v1alpha1"
+	apikeyv1alpha1 "kubeform.dev/provider-grafana-api/apis/apikey/v1alpha1"
 	builtinv1alpha1 "kubeform.dev/provider-grafana-api/apis/builtin/v1alpha1"
+	cloudv1alpha1 "kubeform.dev/provider-grafana-api/apis/cloud/v1alpha1"
 	dashboardv1alpha1 "kubeform.dev/provider-grafana-api/apis/dashboard/v1alpha1"
 	datav1alpha1 "kubeform.dev/provider-grafana-api/apis/data/v1alpha1"
 	folderv1alpha1 "kubeform.dev/provider-grafana-api/apis/folder/v1alpha1"
+	libraryv1alpha1 "kubeform.dev/provider-grafana-api/apis/library/v1alpha1"
+	machinev1alpha1 "kubeform.dev/provider-grafana-api/apis/machine/v1alpha1"
 	organizationv1alpha1 "kubeform.dev/provider-grafana-api/apis/organization/v1alpha1"
+	playlistv1alpha1 "kubeform.dev/provider-grafana-api/apis/playlist/v1alpha1"
+	reportv1alpha1 "kubeform.dev/provider-grafana-api/apis/report/v1alpha1"
 	rolev1alpha1 "kubeform.dev/provider-grafana-api/apis/role/v1alpha1"
 	syntheticv1alpha1 "kubeform.dev/provider-grafana-api/apis/synthetic/v1alpha1"
 	teamv1alpha1 "kubeform.dev/provider-grafana-api/apis/team/v1alpha1"
 	userv1alpha1 "kubeform.dev/provider-grafana-api/apis/user/v1alpha1"
 	controllersalert "kubeform.dev/provider-grafana-controller/controllers/alert"
+	controllersapikey "kubeform.dev/provider-grafana-controller/controllers/apikey"
 	controllersbuiltin "kubeform.dev/provider-grafana-controller/controllers/builtin"
+	controllerscloud "kubeform.dev/provider-grafana-controller/controllers/cloud"
 	controllersdashboard "kubeform.dev/provider-grafana-controller/controllers/dashboard"
 	controllersdata "kubeform.dev/provider-grafana-controller/controllers/data"
 	controllersfolder "kubeform.dev/provider-grafana-controller/controllers/folder"
+	controllerslibrary "kubeform.dev/provider-grafana-controller/controllers/library"
+	controllersmachine "kubeform.dev/provider-grafana-controller/controllers/machine"
 	controllersorganization "kubeform.dev/provider-grafana-controller/controllers/organization"
+	controllersplaylist "kubeform.dev/provider-grafana-controller/controllers/playlist"
+	controllersreport "kubeform.dev/provider-grafana-controller/controllers/report"
 	controllersrole "kubeform.dev/provider-grafana-controller/controllers/role"
 	controllerssynthetic "kubeform.dev/provider-grafana-controller/controllers/synthetic"
 	controllersteam "kubeform.dev/provider-grafana-controller/controllers/team"
@@ -263,6 +275,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "apikey.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ApiKey",
+	}:
+		if err := (&controllersapikey.ApiKeyReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ApiKey"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["grafana_api_key"],
+			TypeName: "grafana_api_key",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ApiKey")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "builtin.grafana.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "RoleAssignment",
@@ -277,6 +306,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "grafana_builtin_role_assignment",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "RoleAssignment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "cloud.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Stack",
+	}:
+		if err := (&controllerscloud.StackReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Stack"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["grafana_cloud_stack"],
+			TypeName: "grafana_cloud_stack",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Stack")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -331,6 +377,23 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "data.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SourcePermission",
+	}:
+		if err := (&controllersdata.SourcePermissionReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("SourcePermission"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["grafana_data_source_permission"],
+			TypeName: "grafana_data_source_permission",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SourcePermission")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "folder.grafana.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Folder",
@@ -365,6 +428,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "library.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Panel",
+	}:
+		if err := (&controllerslibrary.PanelReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Panel"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["grafana_library_panel"],
+			TypeName: "grafana_library_panel",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Panel")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "machine.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "LearningJob",
+	}:
+		if err := (&controllersmachine.LearningJobReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("LearningJob"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["grafana_machine_learning_job"],
+			TypeName: "grafana_machine_learning_job",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "LearningJob")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "organization.grafana.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Organization",
@@ -379,6 +476,40 @@ func SetupManager(ctx context.Context, mgr manager.Manager, gvk schema.GroupVers
 			TypeName: "grafana_organization",
 		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Organization")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "playlist.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Playlist",
+	}:
+		if err := (&controllersplaylist.PlaylistReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Playlist"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["grafana_playlist"],
+			TypeName: "grafana_playlist",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Playlist")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "report.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Report",
+	}:
+		if err := (&controllersreport.ReportReconciler{
+			Client:   mgr.GetClient(),
+			Log:      ctrl.Log.WithName("controllers").WithName("Report"),
+			Scheme:   mgr.GetScheme(),
+			Gvk:      gvk,
+			Provider: _provider,
+			Resource: _provider.ResourcesMap["grafana_report"],
+			TypeName: "grafana_report",
+		}).SetupWithManager(ctx, mgr, auditor, restrictToNamespace); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Report")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -520,12 +651,30 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "apikey.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "ApiKey",
+	}:
+		if err := (&apikeyv1alpha1.ApiKey{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ApiKey")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "builtin.grafana.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "RoleAssignment",
 	}:
 		if err := (&builtinv1alpha1.RoleAssignment{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "RoleAssignment")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "cloud.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Stack",
+	}:
+		if err := (&cloudv1alpha1.Stack{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Stack")
 			return err
 		}
 	case schema.GroupVersionKind{
@@ -556,6 +705,15 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "data.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "SourcePermission",
+	}:
+		if err := (&datav1alpha1.SourcePermission{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "SourcePermission")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "folder.grafana.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Folder",
@@ -574,12 +732,48 @@ func SetupWebhook(mgr manager.Manager, gvk schema.GroupVersionKind) error {
 			return err
 		}
 	case schema.GroupVersionKind{
+		Group:   "library.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Panel",
+	}:
+		if err := (&libraryv1alpha1.Panel{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Panel")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "machine.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "LearningJob",
+	}:
+		if err := (&machinev1alpha1.LearningJob{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LearningJob")
+			return err
+		}
+	case schema.GroupVersionKind{
 		Group:   "organization.grafana.kubeform.com",
 		Version: "v1alpha1",
 		Kind:    "Organization",
 	}:
 		if err := (&organizationv1alpha1.Organization{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Organization")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "playlist.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Playlist",
+	}:
+		if err := (&playlistv1alpha1.Playlist{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Playlist")
+			return err
+		}
+	case schema.GroupVersionKind{
+		Group:   "report.grafana.kubeform.com",
+		Version: "v1alpha1",
+		Kind:    "Report",
+	}:
+		if err := (&reportv1alpha1.Report{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Report")
 			return err
 		}
 	case schema.GroupVersionKind{

@@ -3,7 +3,9 @@ package grafana
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -28,7 +30,7 @@ Grafana Synthetic Monitoring Agent.
 		UpdateContext: resourceSyntheticMonitoringProbeUpdate,
 		DeleteContext: resourceSyntheticMonitoringProbeDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: importProbeStateWithToken,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -107,17 +109,13 @@ func resourceSyntheticMonitoringProbeCreate(ctx context.Context, d *schema.Resou
 
 func resourceSyntheticMonitoringProbeRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	c := meta.(*client).smapi
-	var diags diag.Diagnostics
-	prbs, err := c.ListProbes(ctx)
+	id, err := strconv.ParseInt(d.Id(), 10, 64)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	var prb sm.Probe
-	for _, p := range prbs {
-		if strconv.FormatInt(p.Id, 10) == d.Id() {
-			prb = p
-			break
-		}
+	prb, err := c.GetProbe(ctx, id)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	d.Set("tenant_id", prb.TenantId)
@@ -136,7 +134,7 @@ func resourceSyntheticMonitoringProbeRead(ctx context.Context, d *schema.Resourc
 		d.Set("labels", labels)
 	}
 
-	return diags
+	return nil
 }
 
 func resourceSyntheticMonitoringProbeUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -187,4 +185,30 @@ func makeProbe(d *schema.ResourceData) *sm.Probe {
 		Labels:    labels,
 		Public:    d.Get("public").(bool),
 	}
+}
+
+// importProbeStateWithToken is an implementation of StateContextFunc
+// that can be used to pass the ID of the probe and the existing
+// auth_token.
+func importProbeStateWithToken(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	parts := strings.SplitN(d.Id(), ":", 2)
+
+	// the auth_token is optional
+	if len(parts) == 2 {
+		if parts[0] == "" || parts[1] == "" {
+			return nil, fmt.Errorf("invalid id %q, expected format 'probe_id:auth_token'", d.Id())
+		}
+
+		if _, err := base64.StdEncoding.DecodeString(parts[1]); err != nil {
+			return nil, fmt.Errorf("invalid auth_token %q, expecting a base64-encoded string", parts[1])
+		}
+
+		if err := d.Set("auth_token", parts[1]); err != nil {
+			return nil, fmt.Errorf("failed to set auth_token: %s", err)
+		}
+	}
+
+	d.SetId(parts[0])
+
+	return []*schema.ResourceData{d}, nil
 }

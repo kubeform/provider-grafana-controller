@@ -64,6 +64,8 @@ var (
 	ErrInvalidHttpMethodValue  = errors.New("invalid HTTP method value")
 	ErrInvalidHttpHeaders      = errors.New("invalid HTTP headers")
 
+	ErrInvalidTracerouteHostname = errors.New("invalid traceroute hostname")
+
 	ErrInvalidHostname = errors.New("invalid hostname")
 	ErrInvalidPort     = errors.New("invalid port")
 
@@ -83,8 +85,10 @@ var (
 )
 
 const (
-	MaxCheckLabels      = 5   // Loki allows a maximum of 15 labels, we reserve 7 for internal use
-	MaxProbeLabels      = 3   // and split the other 8 in 3 for the probes and 5 for the checks.
+	MaxMetricLabels     = 20  // Prometheus allows for 32 labels, but limit to 20.
+	MaxLogLabels        = 15  // Loki allows a maximum of 15 labels.
+	MaxCheckLabels      = 10  // Allow 10 user labels for checks,
+	MaxProbeLabels      = 3   // 3 for probes, leaving 7 for internal use.
 	MaxLabelValueLength = 128 // Keep this number low so that the UI remains usable.
 )
 
@@ -92,25 +96,28 @@ const (
 type CheckType int32
 
 const (
-	CheckTypeDns  CheckType = 0
-	CheckTypeHttp CheckType = 1
-	CheckTypePing CheckType = 2
-	CheckTypeTcp  CheckType = 3
+	CheckTypeDns        CheckType = 0
+	CheckTypeHttp       CheckType = 1
+	CheckTypePing       CheckType = 2
+	CheckTypeTcp        CheckType = 3
+	CheckTypeTraceroute CheckType = 4
 )
 
 var (
 	checkType_name = map[CheckType]string{
-		CheckTypeDns:  "dns",
-		CheckTypeHttp: "http",
-		CheckTypePing: "ping",
-		CheckTypeTcp:  "tcp",
+		CheckTypeDns:        "dns",
+		CheckTypeHttp:       "http",
+		CheckTypePing:       "ping",
+		CheckTypeTcp:        "tcp",
+		CheckTypeTraceroute: "traceroute",
 	}
 
 	checkType_value = map[string]CheckType{
-		"dns":  CheckTypeDns,
-		"http": CheckTypeHttp,
-		"ping": CheckTypePing,
-		"tcp":  CheckTypeTcp,
+		"dns":        CheckTypeDns,
+		"http":       CheckTypeHttp,
+		"ping":       CheckTypePing,
+		"tcp":        CheckTypeTcp,
+		"traceroute": CheckTypeTraceroute,
 	}
 )
 
@@ -152,82 +159,57 @@ func (c *Check) Validate() error {
 		return ErrInvalidCheckJob
 	}
 
-	// frequency must be in [1, 120] seconds
-	if c.Frequency < 1*1000 || c.Frequency > 120*1000 {
-		return ErrInvalidCheckFrequency
+	if err := c.validateFrequency(); err != nil {
+		return err
 	}
 
-	// timeout must be in [1, 10] seconds, and it must be less than
-	// frequency (otherwise we can end up running overlapping
-	// checks)
-	if c.Timeout < 1*1000 || c.Timeout > 10*1000 || c.Timeout > c.Frequency {
-		return ErrInvalidCheckTimeout
+	if err := c.validateTimeout(); err != nil {
+		return err
 	}
 
 	if err := validateLabels(c.Labels); err != nil {
 		return err
 	}
 
-	settingsCount := 0
-
-	if c.Settings.Ping != nil {
-		settingsCount++
+	if err := c.validateTarget(); err != nil {
+		return err
 	}
 
-	if c.Settings.Http != nil {
-		settingsCount++
+	if err := c.Settings.Validate(); err != nil {
+		return err
 	}
 
-	if c.Settings.Dns != nil {
-		settingsCount++
-	}
+	return nil
+}
 
-	if c.Settings.Tcp != nil {
-		settingsCount++
-	}
-
-	if settingsCount != 1 {
-		return ErrInvalidCheckSettings
-	}
-
-	switch c.Type() {
-	case CheckTypePing:
-		if err := validateHost(c.Target); err != nil {
-			return ErrInvalidPingHostname
+func (c *Check) validateFrequency() error {
+	// frequency must be in [1, 120] seconds
+	if c.Settings.Traceroute != nil {
+		if c.Frequency != 120*1000 {
+			return ErrInvalidCheckFrequency
 		}
-
-		if err := c.Settings.Ping.Validate(); err != nil {
-			return err
-		}
-
-	case CheckTypeHttp:
-		if err := validateHttpUrl(c.Target); err != nil {
-			return err
-		}
-
-		if err := c.Settings.Http.Validate(); err != nil {
-			return err
-		}
-
-	case CheckTypeDns:
-		if err := validateDnsTarget(c.Target); err != nil {
-			return ErrInvalidDnsName
-		}
-
-		if err := c.Settings.Dns.Validate(); err != nil {
-			return err
-		}
-
-	case CheckTypeTcp:
-		if err := validateHostPort(c.Target); err != nil {
-			return err
-		}
-
-		if err := c.Settings.Tcp.Validate(); err != nil {
-			return err
+	} else {
+		if c.Frequency < 1*1000 || c.Frequency > 120*1000 {
+			return ErrInvalidCheckFrequency
 		}
 	}
+	return nil
+}
 
+func (c *Check) validateTimeout() error {
+	if c.Settings.Traceroute != nil {
+		// We are hardcoding traceroute frequency and timeout until we can get data on what the boundaries should be
+		if c.Timeout != 30*1000 {
+			return ErrInvalidCheckTimeout
+		}
+	} else {
+		// timeout must be in [1, 10] seconds, and it must be less than
+		// frequency (otherwise we can end up running overlapping
+		// checks)
+		if c.Timeout < 1*1000 || c.Timeout > 10*1000 || c.Timeout > c.Frequency {
+			return ErrInvalidCheckTimeout
+		}
+	}
 	return nil
 }
 
@@ -267,13 +249,83 @@ func (c Check) Type() CheckType {
 	case c.Settings.Tcp != nil:
 		return CheckTypeTcp
 
+	case c.Settings.Traceroute != nil:
+		return CheckTypeTraceroute
+
 	default:
 		panic("unhandled check type")
 	}
 }
 
+func (c Check) validateTarget() error {
+	switch c.Type() {
+	case CheckTypeDns:
+		if err := validateDnsTarget(c.Target); err != nil {
+			return ErrInvalidDnsName
+		}
+
+	case CheckTypeHttp:
+		return validateHttpUrl(c.Target)
+
+	case CheckTypePing:
+		if err := validateHost(c.Target); err != nil {
+			return ErrInvalidPingHostname
+		}
+
+	case CheckTypeTcp:
+		return validateHostPort(c.Target)
+
+	case CheckTypeTraceroute:
+		if err := validateHost(c.Target); err != nil {
+			return ErrInvalidTracerouteHostname
+		}
+
+	default:
+		panic("unhandled check type")
+	}
+
+	return nil
+}
+
 func (c *Check) ConfigVersion() string {
 	return strconv.FormatInt(int64(c.Modified*1000000000), 10)
+}
+
+func (s CheckSettings) Validate() error {
+	var validateFn func() error
+
+	settingsCount := 0
+
+	if s.Ping != nil {
+		settingsCount++
+		validateFn = s.Ping.Validate
+	}
+
+	if s.Http != nil {
+		settingsCount++
+		validateFn = s.Http.Validate
+	}
+
+	if s.Dns != nil {
+		settingsCount++
+		validateFn = s.Dns.Validate
+	}
+
+	if s.Tcp != nil {
+		settingsCount++
+		validateFn = s.Tcp.Validate
+	}
+
+	if s.Traceroute != nil {
+		settingsCount++
+		validateFn = s.Traceroute.Validate
+	}
+
+	if settingsCount != 1 {
+		return ErrInvalidCheckSettings
+	}
+
+	return validateFn()
 }
 
 func (s *PingSettings) Validate() error {
@@ -319,6 +371,10 @@ func (s *DnsSettings) Validate() error {
 }
 
 func (s *TcpSettings) Validate() error {
+	return nil
+}
+
+func (s *TracerouteSettings) Validate() error {
 	return nil
 }
 
