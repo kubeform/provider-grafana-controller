@@ -1448,8 +1448,8 @@ kmodules.xyz/resource-metrics/api
 ## explicit; go 1.16
 kubeform.dev/apimachinery/api/v1alpha1
 kubeform.dev/apimachinery/pkg/util
-# kubeform.dev/provider-grafana-api v0.4.1-0.20220308120905-0855899dbc8f
-## explicit; go 1.15
+# kubeform.dev/provider-grafana-api v0.5.0
+## explicit; go 1.17
 kubeform.dev/provider-grafana-api/api/provider
 kubeform.dev/provider-grafana-api/apis/alert
 kubeform.dev/provider-grafana-api/apis/alert/v1alpha1
